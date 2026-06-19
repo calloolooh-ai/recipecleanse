@@ -14,6 +14,8 @@ import re
 from recipe_cleanse.config import (
     AI_BACKEND,
     AI_SYSTEM_PROMPT,
+    OPENAI_API_KEY,
+    OPENAI_MODEL,
     GOOGLE_API_KEY,
     GOOGLE_MODEL,
     OLLAMA_BASE_URL,
@@ -39,6 +41,9 @@ def parse_with_ai(raw_text: str) -> dict:
         RuntimeError: AI call failed or returned unparseable output.
         ValueError:   Unknown AI_BACKEND configured.
     """
+    if AI_BACKEND == "openai":
+        return _parse_openai(raw_text)
+
     if AI_BACKEND == "google":
         return _parse_google(raw_text)
 
@@ -47,8 +52,52 @@ def parse_with_ai(raw_text: str) -> dict:
 
     raise ValueError(
         f"Unknown AI_BACKEND='{AI_BACKEND}'. "
-        "Valid options: 'google' (default) or 'ollama' (local dev)."
+        "Valid options: 'openai' (default), 'google', or 'ollama' (local dev)."
     )
+
+
+# ── OpenAI Backend ───────────────────────────────────────────────────────────
+
+def _parse_openai(raw_text: str) -> dict:
+    """
+    Call OpenAI via the official openai SDK.
+    Uses JSON mode to guarantee parseable output.
+    Get a key at: https://platform.openai.com/api-keys
+    """
+    try:
+        from openai import OpenAI
+    except ImportError:
+        raise RuntimeError(
+            "Package 'openai' is not installed.\n"
+            "Fix: pip install openai"
+        )
+
+    if not OPENAI_API_KEY:
+        raise RuntimeError(
+            "OPENAI_API_KEY is not set. "
+            "Add it to Vercel → Settings → Environment Variables.\n"
+            "Get a key at: https://platform.openai.com/api-keys"
+        )
+
+    client = OpenAI(api_key=OPENAI_API_KEY)
+
+    try:
+        response = client.chat.completions.create(
+            model=OPENAI_MODEL,
+            messages=[
+                {"role": "system", "content": AI_SYSTEM_PROMPT},
+                {
+                    "role": "user",
+                    "content": f"Extract the complete recipe from this webpage text:\n\n{raw_text}",
+                },
+            ],
+            temperature=0,
+            response_format={"type": "json_object"},  # OpenAI JSON mode
+        )
+    except Exception as exc:
+        raise RuntimeError(f"OpenAI API error: {type(exc).__name__}: {exc}") from exc
+
+    return _parse_and_validate_json(response.choices[0].message.content)
 
 
 # ── Google GenAI Backend ──────────────────────────────────────────────────────

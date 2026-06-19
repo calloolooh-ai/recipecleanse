@@ -13,11 +13,16 @@ from dotenv import load_dotenv
 load_dotenv()
 
 # ── AI Backend ────────────────────────────────────────────────────────────────
-# Set AI_BACKEND=google  (default, works on Vercel)
+# Set AI_BACKEND=openai  (default)
+# Set AI_BACKEND=google  (Gemini)
 # Set AI_BACKEND=ollama  (local dev, requires Ollama server)
-AI_BACKEND = os.getenv("AI_BACKEND", "google")
+AI_BACKEND = os.getenv("AI_BACKEND", "openai")
 
-# Google Gemini — free tier available at aistudio.google.com
+# OpenAI — platform.openai.com/api-keys
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "")
+OPENAI_MODEL   = os.getenv("OPENAI_MODEL", "gpt-4o-mini")  # cheap, fast, accurate
+
+# Google Gemini — aistudio.google.com/app/apikey
 GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY", "")
 GOOGLE_MODEL   = os.getenv("GOOGLE_MODEL", "gemini-2.0-flash")
 
