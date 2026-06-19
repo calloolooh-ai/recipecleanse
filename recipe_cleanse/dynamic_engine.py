@@ -14,6 +14,8 @@ import re
 from recipe_cleanse.config import (
     AI_BACKEND,
     AI_SYSTEM_PROMPT,
+    GROQ_API_KEY,
+    GROQ_MODEL,
     OPENAI_API_KEY,
     OPENAI_MODEL,
     GOOGLE_API_KEY,
@@ -41,6 +43,9 @@ def parse_with_ai(raw_text: str) -> dict:
         RuntimeError: AI call failed or returned unparseable output.
         ValueError:   Unknown AI_BACKEND configured.
     """
+    if AI_BACKEND == "groq":
+        return _parse_groq(raw_text)
+
     if AI_BACKEND == "openai":
         return _parse_openai(raw_text)
 
@@ -54,6 +59,53 @@ def parse_with_ai(raw_text: str) -> dict:
         f"Unknown AI_BACKEND='{AI_BACKEND}'. "
         "Valid options: 'openai' (default), 'google', or 'ollama' (local dev)."
     )
+
+
+# ── Groq Backend ─────────────────────────────────────────────────────────────
+
+def _parse_groq(raw_text: str) -> dict:
+    """
+    Call Groq via the openai SDK pointed at Groq's base URL.
+    Groq is OpenAI API-compatible — same SDK, different endpoint + key.
+    Free tier: ~14,400 req/day at console.groq.com
+    """
+    try:
+        from openai import OpenAI
+    except ImportError:
+        raise RuntimeError(
+            "Package 'openai' is not installed.\n"
+            "Fix: pip install openai"
+        )
+
+    if not GROQ_API_KEY:
+        raise RuntimeError(
+            "GROQ_API_KEY is not set. "
+            "Add it to Vercel → Settings → Environment Variables.\n"
+            "Get a free key at: https://console.groq.com"
+        )
+
+    client = OpenAI(
+        api_key=GROQ_API_KEY,
+        base_url="https://api.groq.com/openai/v1",
+    )
+
+    try:
+        response = client.chat.completions.create(
+            model=GROQ_MODEL,
+            messages=[
+                {"role": "system", "content": AI_SYSTEM_PROMPT},
+                {
+                    "role": "user",
+                    "content": f"Extract the complete recipe from this webpage text:\n\n{raw_text}",
+                },
+            ],
+            temperature=0,
+            response_format={"type": "json_object"},
+        )
+    except Exception as exc:
+        raise RuntimeError(f"Groq API error: {type(exc).__name__}: {exc}") from exc
+
+    return _parse_and_validate_json(response.choices[0].message.content)
 
 
 # ── OpenAI Backend ───────────────────────────────────────────────────────────

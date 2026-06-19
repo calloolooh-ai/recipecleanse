@@ -13,18 +13,23 @@ from dotenv import load_dotenv
 load_dotenv()
 
 # ── AI Backend ────────────────────────────────────────────────────────────────
-# Set AI_BACKEND=openai  (default)
+# Set AI_BACKEND=groq    (default — generous free tier, very fast)
+# Set AI_BACKEND=openai  (OpenAI GPT models)
 # Set AI_BACKEND=google  (Gemini)
 # Set AI_BACKEND=ollama  (local dev, requires Ollama server)
-AI_BACKEND = os.getenv("AI_BACKEND", "openai")
+AI_BACKEND = os.getenv("AI_BACKEND", "groq")
+
+# Groq — free tier at console.groq.com  (~14,400 req/day free)
+GROQ_API_KEY = os.getenv("GROQ_API_KEY", "")
+GROQ_MODEL   = os.getenv("GROQ_MODEL", "llama-3.3-70b-versatile")
 
 # OpenAI — platform.openai.com/api-keys
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "")
-OPENAI_MODEL   = os.getenv("OPENAI_MODEL", "gpt-4o-mini")  # cheap, fast, accurate
+OPENAI_MODEL   = os.getenv("OPENAI_MODEL", "gpt-4o-mini")
 
 # Google Gemini — aistudio.google.com/app/apikey
 GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY", "")
-GOOGLE_MODEL   = os.getenv("GOOGLE_MODEL", "gemini-2.0-flash")
+GOOGLE_MODEL   = os.getenv("GOOGLE_MODEL", "gemini-2.0-flash-lite")  # lite = higher free quota
 
 # Ollama — local inference server (https://ollama.ai)
 OLLAMA_BASE_URL = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")

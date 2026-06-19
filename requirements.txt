@@ -4,8 +4,8 @@ beautifulsoup4>=4.12.0             # HTML parsing for raw-text fallback
 requests>=2.31.0                   # HTTP fetching
 lxml>=5.0.0                        # Fast BS4 HTML parser backend
 
-# ── AI backend (default: openai) ──────────────────────────────────────────────
-openai>=1.0.0                      # OpenAI GPT models (default backend)
+# ── AI backends ───────────────────────────────────────────────────────────────
+openai>=1.0.0                      # Used by both Groq (default) and OpenAI backends
 google-genai>=1.0.0                # Google Gemini (set AI_BACKEND=google to use)
 # ollama>=0.3.0                    # Uncomment for local Ollama inference
 
