@@ -55,15 +55,17 @@ def parse_with_ai(raw_text: str) -> dict:
 
 def _parse_google(raw_text: str) -> dict:
     """
-    Call Google Gemini via the google-generativeai SDK.
-    Free tier at: https://aistudio.google.com/app/apikey
+    Call Google Gemini via the google-genai SDK (the current unified SDK).
+    Free tier key: https://aistudio.google.com/app/apikey
+    Install:       pip install google-genai
     """
     try:
-        import google.generativeai as genai
+        from google import genai
+        from google.genai import types as genai_types
     except ImportError:
         raise RuntimeError(
-            "Package 'google-generativeai' is not installed.\n"
-            "Fix: pip install google-generativeai"
+            "Package 'google-genai' is not installed.\n"
+            "Fix: pip install google-genai"
         )
 
     if not GOOGLE_API_KEY:
@@ -73,19 +75,18 @@ def _parse_google(raw_text: str) -> dict:
             "Get a free key at: https://aistudio.google.com/app/apikey"
         )
 
-    genai.configure(api_key=GOOGLE_API_KEY)
-
-    model = genai.GenerativeModel(
-        model_name=GOOGLE_MODEL,
-        system_instruction=AI_SYSTEM_PROMPT,
-        generation_config={
-            "temperature": 0,           # Deterministic output for structured data
-            "response_mime_type": "application/json",  # Force JSON mode
-        },
-    )
+    client = genai.Client(api_key=GOOGLE_API_KEY)
 
     prompt   = f"Extract the complete recipe from this webpage text:\n\n{raw_text}"
-    response = model.generate_content(prompt)
+    response = client.models.generate_content(
+        model=GOOGLE_MODEL,
+        contents=prompt,
+        config=genai_types.GenerateContentConfig(
+            system_instruction=AI_SYSTEM_PROMPT,
+            temperature=0,                       # Deterministic structured output
+            response_mime_type="application/json",
+        ),
+    )
 
     return _parse_and_validate_json(response.text)
 

@@ -13,6 +13,8 @@ Handles:
   • Fractional results      0.75 → "3/4",  1.333 → "1 1/3"
 """
 
+from __future__ import annotations
+
 import re
 from fractions import Fraction
 

@@ -11,6 +11,8 @@ Produces a beautifully styled, full-screen recipe display featuring:
 All style tokens are centralised in config.THEME for easy reskinning.
 """
 
+from __future__ import annotations
+
 from rich.console import Console
 from rich.panel   import Panel
 from rich.table   import Table

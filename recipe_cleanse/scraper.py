@@ -10,6 +10,8 @@ Layer 2 (Fallback): requests + BeautifulSoup4
   This raw text blob is handed to dynamic_engine.py for AI parsing.
 """
 
+from __future__ import annotations
+
 import requests
 from bs4 import BeautifulSoup
 

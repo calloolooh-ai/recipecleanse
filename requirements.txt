@@ -1,18 +1,18 @@
 # ── Core scraping ─────────────────────────────────────────────────────────────
-recipe-scrapers>=15.0.0       # Schema.org / JSON-LD structured recipe extraction
-beautifulsoup4>=4.12.0        # HTML parsing for the raw-text fallback layer
-requests>=2.31.0              # HTTP fetching (sync, simple, battle-tested)
-lxml>=5.0.0                   # Fast BS4 HTML parser backend
+recipe-scrapers>=14.0.0,<16.0.0   # Schema.org / JSON-LD recipe extraction
+beautifulsoup4>=4.12.0             # HTML parsing for raw-text fallback
+requests>=2.31.0                   # HTTP fetching
+lxml>=5.0.0                        # Fast BS4 HTML parser backend
 
-# ── AI backends (install the one you need) ────────────────────────────────────
-google-generativeai>=0.8.0    # Google Gemini API (default; free tier available)
-# ollama>=0.3.0               # Uncomment for local Ollama inference
+# ── AI backend ────────────────────────────────────────────────────────────────
+google-genai>=1.0.0                # Google Gemini (current unified SDK, free tier available)
+# ollama>=0.3.0                    # Uncomment for local Ollama inference
 
 # ── Terminal UI ───────────────────────────────────────────────────────────────
-rich>=13.7.0                  # Beautiful terminal rendering (panels, tables, colours)
+rich>=13.7.0                       # Beautiful terminal rendering
 
 # ── Web / Vercel deployment ───────────────────────────────────────────────────
-flask>=3.0.0                  # Lightweight WSGI framework for the Vercel web layer
+flask>=3.0.0                       # WSGI framework for the Vercel web layer
 
 # ── Utilities ─────────────────────────────────────────────────────────────────
-python-dotenv>=1.0.0          # Load .env for local development
+python-dotenv>=1.0.0               # Load .env for local development

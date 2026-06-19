@@ -19,7 +19,7 @@ AI_BACKEND = os.getenv("AI_BACKEND", "google")
 
 # Google Gemini — free tier available at aistudio.google.com
 GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY", "")
-GOOGLE_MODEL   = os.getenv("GOOGLE_MODEL", "gemini-2.0-flash-exp")
+GOOGLE_MODEL   = os.getenv("GOOGLE_MODEL", "gemini-2.0-flash")
 
 # Ollama — local inference server (https://ollama.ai)
 OLLAMA_BASE_URL = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
