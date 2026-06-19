@@ -205,7 +205,7 @@ _HOME_TEMPLATE = """
   <div class="card">
     <div class="title">
       {{ recipe.title }}
-      <span class="source-badge">{{ source }}</span>
+      <span class="source-badge">{{ parse_source }}</span>
     </div>
 
     {% if recipe.prep_time or recipe.cook_time or recipe.total_time or recipe.servings %}
@@ -313,7 +313,7 @@ def home():
         recipe=None,
         error=None,
         url=None,
-        source=None,
+        parse_source=None,
         ingredients=[],
         base_ingredients_json="[]",
         multiplier=1,
@@ -329,8 +329,8 @@ def parse():
     url        = request.form.get("url", "").strip()
     error      = None
     recipe     = None
-    source     = None
-    multiplier = 1.0
+    parse_source = None
+    multiplier   = 1.0
 
     if not url:
         error = "Please enter a URL."
@@ -341,12 +341,12 @@ def parse():
             result = fetch_recipe(url)
 
             if not result.needs_ai:
-                recipe = result.data
-                source = "schema"
+                recipe       = result.data
+                parse_source = "schema"
             else:
                 if result.raw_text:
-                    recipe = parse_with_ai(result.raw_text)
-                    source = "ai"
+                    recipe       = parse_with_ai(result.raw_text)
+                    parse_source = "ai"
                 else:
                     error = (
                         "Couldn't extract text from that page. "
@@ -366,7 +366,7 @@ def parse():
         recipe=recipe,
         error=error,
         url=url,
-        source=source,
+        parse_source=parse_source,
         ingredients=ingredients,
         base_ingredients_json=json.dumps(ingredients),
         multiplier=multiplier,
