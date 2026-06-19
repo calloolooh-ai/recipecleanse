@@ -1,5 +1,5 @@
 """
-api/index.py — Recipe Cleanse web interface for Vercel deployment.
+api/index.py — Recipe Cleanser web interface for Vercel deployment.
 
 Exposes a single-page Flask application that mirrors the CLI pipeline
 in a browser-friendly format.  The terminal Rich formatting is replaced
@@ -175,11 +175,11 @@ _HOME_TEMPLATE = """
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Recipe Cleanse</title>
+  <title>Recipe Cleanser</title>
   <style>{{ css }}</style>
 </head>
 <body>
-  <div class="brand">✿  Recipe Cleanse  ✿</div>
+  <div class="brand">✿  Recipe Cleanser  ✿</div>
   <div class="tagline">Cuts the clutter — keeps the cooking.</div>
 
   <div class="card">
@@ -296,7 +296,7 @@ _HOME_TEMPLATE = """
   </script>
   {% endif %}
 
-  <div class="footer">Recipe Cleanse — open source, no trackers, no stories.</div>
+  <div class="footer">Recipe Cleanser — open source, no trackers, no stories.</div>
 </body>
 </html>
 """

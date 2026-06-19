@@ -82,7 +82,7 @@ def _render_header(data: dict, multiplier: float) -> None:
     scale_tag = f"  ✦ {multiplier}×" if multiplier != 1.0 else ""
 
     # App brand bar
-    brand = Text("  ✿  Recipe Cleanse  ✿  ", style=THEME["brand"], justify="center")
+    brand = Text("  ✿  Recipe Cleanser  ✿  ", style=THEME["brand"], justify="center")
     console.print()
     console.print(brand, justify="center")
 
@@ -170,7 +170,7 @@ def _render_footer() -> None:
     """Subtle footer tagline."""
     console.print(Rule(style="dim"))
     console.print(
-        "[dim]Recipe Cleanse — cut the clutter, keep the cooking[/dim]",
+        "[dim]Recipe Cleanser — cut the clutter, keep the cooking[/dim]",
         justify="center",
     )
     console.print()

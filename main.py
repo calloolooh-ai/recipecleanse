@@ -1,5 +1,5 @@
 """
-main.py — Recipe Cleanse CLI entry point.
+main.py — Recipe Cleanser CLI entry point.
 
 Orchestrates the full pipeline:
     URL input → Scraper → AI engine (if needed) → Scaler → Rich terminal UI
@@ -101,7 +101,7 @@ def interactive_loop(recipe_data: dict, initial_multiplier: float = 1.0) -> None
 
         if raw in ("exit", "quit", "q", ""):
             console.print(
-                "\n[dim]Thanks for using Recipe Cleanse.  Happy cooking! 👨‍🍳[/dim]\n"
+                "\n[dim]Thanks for using Recipe Cleanser.  Happy cooking! 👨‍🍳[/dim]\n"
             )
             break
 
@@ -126,8 +126,8 @@ def interactive_loop(recipe_data: dict, initial_multiplier: float = 1.0) -> None
 def main() -> None:
     """Parse CLI arguments and launch the application."""
     parser = argparse.ArgumentParser(
-        prog="recipe-cleanse",
-        description="Recipe Cleanse — strip the blog noise, serve the recipe.",
+        prog="recipe-cleanser",
+        description="Recipe Cleanser — strip the blog noise, serve the recipe.",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog=(
             "Examples:\n"
@@ -152,7 +152,7 @@ def main() -> None:
 
     # Splash header
     console.print()
-    console.print("[bold dark_green]  ✿  Recipe Cleanse  ✿  [/bold dark_green]  [dim]v1.0[/dim]")
+    console.print("[bold dark_green]  ✿  Recipe Cleanser  ✿  [/bold dark_green]  [dim]v1.0[/dim]")
     console.print("[dim]  Cuts the clutter — keeps the cooking.[/dim]\n")
 
     # ── Get URL ───────────────────────────────────────────────────────────
