@@ -357,6 +357,8 @@ def parse():
             error = str(exc)
         except (RuntimeError, ValueError) as exc:
             error = f"AI parsing failed: {exc}"
+        except Exception as exc:
+            error = f"Unexpected error ({type(exc).__name__}): {exc}"
 
     ingredients = recipe.get("ingredients", []) if recipe else []
 

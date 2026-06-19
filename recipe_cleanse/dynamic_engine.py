@@ -77,16 +77,20 @@ def _parse_google(raw_text: str) -> dict:
 
     client = genai.Client(api_key=GOOGLE_API_KEY)
 
-    prompt   = f"Extract the complete recipe from this webpage text:\n\n{raw_text}"
-    response = client.models.generate_content(
-        model=GOOGLE_MODEL,
-        contents=prompt,
-        config=genai_types.GenerateContentConfig(
-            system_instruction=AI_SYSTEM_PROMPT,
-            temperature=0,                       # Deterministic structured output
-            response_mime_type="application/json",
-        ),
-    )
+    prompt = f"Extract the complete recipe from this webpage text:\n\n{raw_text}"
+    try:
+        response = client.models.generate_content(
+            model=GOOGLE_MODEL,
+            contents=prompt,
+            config=genai_types.GenerateContentConfig(
+                system_instruction=AI_SYSTEM_PROMPT,
+                temperature=0,
+                response_mime_type="application/json",
+            ),
+        )
+    except Exception as exc:
+        # Wrap Google API errors (PermissionDenied, quota, network, etc.)
+        raise RuntimeError(f"Gemini API error: {type(exc).__name__}: {exc}") from exc
 
     return _parse_and_validate_json(response.text)
 
