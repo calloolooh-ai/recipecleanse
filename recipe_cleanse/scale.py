@@ -73,11 +73,16 @@ _LEADING_RE = re.compile(
     re.VERBOSE | re.UNICODE,
 )
 
-# Matches a quantity followed immediately by a unit word anywhere in the string
+# Matches a quantity followed by up to 2 optional adjective words, then a unit.
+# Allows "2 beaten large eggs" (beaten = optional adj, large = unit) in addition
+# to the simple "280g" / "2 tsp" cases.
 _UNIT_QUANTITY_RE = re.compile(
-    rf"{_QUANTITY_PATTERN}\s*(?={_UNITS})",
+    rf"{_QUANTITY_PATTERN}\s*(?:\w+\s+){{0,2}}(?={_UNITS})",
     re.VERBOSE | re.UNICODE | re.IGNORECASE,
 )
+
+# Splits instruction text into clause fragments for second-pass unitless scaling
+_CLAUSE_SPLIT_RE = re.compile(r"([,;]|\s+and\s+|\s+then\s+)")
 
 
 # ── Public API ────────────────────────────────────────────────────────────────
@@ -105,7 +110,13 @@ def scale_instructions(instructions: list[str], multiplier: float) -> list[str]:
 
 
 def _scale_instruction_step(step: str, multiplier: float) -> str:
-    """Scale all unit-qualified quantities throughout a single instruction step."""
+    """Scale all scalable quantities throughout a single instruction step.
+
+    Pass 1 — unit-qualified: scales "280g", "2 tsp", "2 beaten large eggs"
+    Pass 2 — clause leading: scales unitless counts ("2 mashed bananas") by
+    checking the leading quantity of each comma/and-separated clause that
+    wasn't already handled in pass 1.
+    """
     normalised = _replace_unicode_fractions(step)
 
     def _replace(m: re.Match) -> str:
@@ -115,7 +126,29 @@ def _scale_instruction_step(step: str, multiplier: float) -> str:
             return m.group(0)
         return m.group(0).replace(token, _to_string(value * multiplier), 1)
 
-    return _UNIT_QUANTITY_RE.sub(_replace, normalised)
+    result = _UNIT_QUANTITY_RE.sub(_replace, normalised)
+
+    # Pass 2: scale leading quantities in clauses with no recognised unit
+    clauses = _CLAUSE_SPLIT_RE.split(result)
+    new_clauses = []
+    for clause in clauses:
+        if _CLAUSE_SPLIT_RE.fullmatch(clause):
+            new_clauses.append(clause)
+            continue
+        if not _UNIT_QUANTITY_RE.search(clause):
+            stripped = clause.lstrip()
+            m = _LEADING_RE.match(stripped)
+            if m:
+                token = m.group(1)
+                value = _to_float(token)
+                if value is not None:
+                    leading_ws = clause[: len(clause) - len(stripped)]
+                    clause = leading_ws + stripped.replace(
+                        token, _to_string(value * multiplier), 1
+                    )
+        new_clauses.append(clause)
+
+    return "".join(new_clauses)
 
 
 # ── Internal Helpers ──────────────────────────────────────────────────────────
