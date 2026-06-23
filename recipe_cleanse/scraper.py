@@ -150,6 +150,12 @@ def _fetch_raw_fallback(url: str) -> ScraperResult:
         )
     except requests.exceptions.HTTPError as exc:
         code = exc.response.status_code
+        if code == 403:
+            raise ConnectionError(
+                f"That site is blocking automated requests (HTTP 403). "
+                "Try a different recipe site — Simply Recipes, BBC Good Food, "
+                "Cookie and Kate, and Serious Eats work well."
+            )
         raise ConnectionError(
             f"HTTP {code} error fetching {url}. "
             "The site may require login or be blocking scrapers."
