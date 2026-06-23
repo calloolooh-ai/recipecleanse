@@ -413,7 +413,7 @@ _HOME_TEMPLATE = """
   <div class="tagline">Strip the blog. Keep the recipe.</div>
 
   <div class="search-card">
-    <form action="/parse#recipe" method="post" onsubmit="handleSubmit(this)">
+    <form action="/parse" method="post" onsubmit="handleSubmit(this)">
       <div class="search-row">
         <input
           class="url-input"
@@ -522,21 +522,35 @@ _HOME_TEMPLATE = """
 
     async function applyPreset(mult, btn) {
       if (mult === currentMult) return;
-      currentMult = mult;
+      const prevMult = currentMult;
+      const prevActive = document.querySelector('.pill.active');
 
       document.querySelectorAll('.pill').forEach(p => p.classList.remove('active'));
       btn.classList.add('active');
 
+      let resp;
+      try {
+        resp = await fetch('/scale', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ ingredients: BASE_INGREDIENTS, multiplier: mult }),
+        });
+      } catch (err) {
+        document.querySelectorAll('.pill').forEach(p => p.classList.remove('active'));
+        if (prevActive) prevActive.classList.add('active');
+        return;
+      }
+      if (!resp.ok) {
+        document.querySelectorAll('.pill').forEach(p => p.classList.remove('active'));
+        if (prevActive) prevActive.classList.add('active');
+        return;
+      }
+      const data = await resp.json();
+      currentMult = mult;
+
       const badge = document.getElementById('scale-badge');
       badge.textContent = mult + '×';
       badge.style.display = mult === 1 ? 'none' : 'inline';
-
-      const resp = await fetch('/scale', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ingredients: BASE_INGREDIENTS, multiplier: mult }),
-      });
-      const data = await resp.json();
       const list = document.getElementById('ingredients-list');
       list.innerHTML = '';
       data.ingredients.forEach(text => {
@@ -551,6 +565,10 @@ _HOME_TEMPLATE = """
         list.appendChild(li);
       });
     }
+
+    window.addEventListener('DOMContentLoaded', function() {
+      document.getElementById('recipe').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
   </script>
   {% endif %}
 
@@ -636,7 +654,10 @@ def parse():
 def scale():
     body        = request.get_json(silent=True) or {}
     ingredients = body.get("ingredients", [])
-    multiplier  = float(body.get("multiplier", 1.0))
+    try:
+        multiplier = float(body.get("multiplier", 1.0))
+    except (TypeError, ValueError):
+        return jsonify({"error": "multiplier must be a number"}), 400
     if multiplier <= 0:
         return jsonify({"error": "multiplier must be positive"}), 400
     return jsonify({"ingredients": scale_ingredients(ingredients, multiplier)})

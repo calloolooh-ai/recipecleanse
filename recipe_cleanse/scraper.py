@@ -156,10 +156,10 @@ def _extract_fields(scraper) -> dict:
 
     return {
         "title":        safe(scraper.title, ""),
-        "prep_time":    f"{prep_mins} min"  if prep_mins  else "",
-        "cook_time":    f"{cook_mins} min"  if cook_mins  else "",
-        "total_time":   f"{total_mins} min" if total_mins else "",
-        "servings":     safe(lambda: str(scraper.yields()), ""),
+        "prep_time":    f"{prep_mins} min"  if prep_mins  is not None else "",
+        "cook_time":    f"{cook_mins} min"  if cook_mins  is not None else "",
+        "total_time":   f"{total_mins} min" if total_mins is not None else "",
+        "servings":     safe(lambda: str(y) if (y := scraper.yields()) is not None else "", ""),
         "ingredients":  safe(scraper.ingredients, []),
         "instructions": safe(scraper.instructions_list, []),
     }
