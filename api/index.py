@@ -167,6 +167,13 @@ _BASE_CSS = """
   }
   .footer { color: var(--muted); font-size: 0.75rem; margin-top: 1rem; text-align: center; }
   @media (max-width: 500px) { .card { padding: 1rem; } }
+  @media print {
+    .brand, .tagline, form, .footer, .source-badge, #scale-badge { display: none !important; }
+    body { background: white; color: black; }
+    .card { border: none; }
+    .ingredient-list li { color: black; }
+    .ingredient-list li::before { color: #666; }
+  }
 """
 
 _HOME_TEMPLATE = """
@@ -183,7 +190,7 @@ _HOME_TEMPLATE = """
   <div class="tagline">Cuts the clutter — keeps the cooking.</div>
 
   <div class="card">
-    <form action="/parse" method="post">
+    <form action="/parse" method="post" onsubmit="handleSubmit(this)">
       <div class="form-row">
         <input
           type="url"
@@ -199,6 +206,13 @@ _HOME_TEMPLATE = """
         <p class="error">✖  {{ error }}</p>
       {% endif %}
     </form>
+    <p style="margin-top:0.6rem;font-size:0.8rem;">
+      <span style="color:var(--muted);">Try an example: </span>
+      <a href="#" style="color:var(--cyan);text-decoration:none;"
+         onclick="document.querySelector('input[name=url]').value='https://www.allrecipes.com/recipe/10813/best-chocolate-chip-cookies/';return false;">
+        Chocolate Chip Cookies
+      </a>
+    </p>
   </div>
 
   {% if recipe %}
@@ -206,6 +220,7 @@ _HOME_TEMPLATE = """
     <div class="title">
       {{ recipe.title }}
       <span class="source-badge">{{ parse_source }}</span>
+      <span class="source-badge" id="scale-badge" style="display:none;color:var(--yellow);border-color:var(--yellow);">1×</span>
     </div>
 
     {% if recipe.prep_time or recipe.cook_time or recipe.total_time or recipe.servings %}
@@ -238,7 +253,7 @@ _HOME_TEMPLATE = """
     {% endif %}
 
     <!-- Scale control -->
-    <form style="margin-bottom:1rem;" onsubmit="applyScale(event)">
+    <form style="margin-bottom:0.5rem;" onsubmit="applyScale(event)">
       <div class="form-row" style="align-items:center;">
         <label style="color:var(--muted);font-size:0.85rem;white-space:nowrap;">
           Serving scale:
@@ -254,6 +269,11 @@ _HOME_TEMPLATE = """
         <button type="submit" class="secondary">Apply ×</button>
       </div>
     </form>
+    <div style="margin-bottom:1rem;">
+      <button type="button" class="secondary" onclick="window.print()" style="font-size:0.8rem;padding:0.4rem 1rem;">
+        Print Recipe
+      </button>
+    </div>
 
     <!-- Ingredients -->
     <hr class="section-rule">
@@ -291,12 +311,29 @@ _HOME_TEMPLATE = """
       });
       const data = await resp.json();
       const list = document.getElementById('ingredients-list');
-      list.innerHTML = data.ingredients.map(i => `<li>${i}</li>`).join('');
+      list.innerHTML = '';
+      data.ingredients.forEach(i => {
+        const li = document.createElement('li');
+        li.textContent = i;
+        list.appendChild(li);
+      });
+      const badge = document.getElementById('scale-badge');
+      if (badge) {
+        badge.textContent = mult + '×';
+        badge.style.display = '';
+      }
     }
   </script>
   {% endif %}
 
   <div class="footer">Recipe Cleanser — open source, no trackers, no stories.</div>
+  <script>
+  function handleSubmit(form) {
+    const btn = form.querySelector('button[type=submit]');
+    btn.disabled = true;
+    btn.textContent = 'Fetching…';
+  }
+  </script>
 </body>
 </html>
 """
