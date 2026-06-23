@@ -1,23 +1,16 @@
 """
-api/index.py — Recipe Cleanser web interface for Vercel deployment.
-
-Exposes a single-page Flask application that mirrors the CLI pipeline
-in a browser-friendly format.  The terminal Rich formatting is replaced
-with an inline CSS design that replicates the dark-terminal aesthetic.
+api/index.py — Recipe Cleanse web interface for Vercel deployment.
 
 Routes:
-    GET  /              — Input form
-    POST /parse         — Scrape + AI parse, render recipe card
-    POST /scale         — Re-render recipe with a new multiplier (JSON API)
-
-Vercel entry: this file is the WSGI handler referenced in vercel.json.
+    GET  /        — Input form
+    POST /parse   — Scrape + AI parse, render recipe card
+    POST /scale   — Re-scale ingredients (JSON API)
 """
 
 import sys
 import os
 import json
 
-# Allow importing the recipe_cleanse package from the project root
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from flask import Flask, request, jsonify, render_template_string
@@ -29,150 +22,374 @@ from recipe_cleanse.scale          import scale_ingredients
 app = Flask(__name__)
 
 
-# ── HTML Templates ────────────────────────────────────────────────────────────
-# Inline templates keep the deployment self-contained (no /templates dir needed
-# in a serverless environment).
-
 _BASE_CSS = """
   :root {
-    --bg:       #0d1117;
-    --surface:  #161b22;
-    --border:   #30363d;
-    --green:    #3fb950;
-    --cyan:     #58a6ff;
-    --magenta:  #d2a8ff;
-    --yellow:   #e3b341;
-    --red:      #f85149;
-    --text:     #c9d1d9;
-    --muted:    #8b949e;
-    --font:     'JetBrains Mono', 'Fira Code', 'Cascadia Code', monospace;
+    --bg:        #141210;
+    --surface:   #1e1a17;
+    --surface2:  #252119;
+    --border:    #3a342d;
+    --brand:     #e8a847;
+    --text:      #e8e0d5;
+    --text-dim:  #b5aa9e;
+    --muted:     #8a7f74;
+    --error:     #d4635a;
+    --link:      #a8c4e0;
+    --font-mono: 'JetBrains Mono', 'Fira Code', monospace;
+    --font:      'Inter', 'Segoe UI', system-ui, -apple-system, sans-serif;
+    --radius:    8px;
+    --radius-sm: 4px;
   }
+
   * { box-sizing: border-box; margin: 0; padding: 0; }
+
   body {
     background: var(--bg);
     color: var(--text);
     font-family: var(--font);
-    font-size: 14px;
+    font-size: 15px;
     line-height: 1.6;
     min-height: 100vh;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    padding: 2rem 1rem;
+    padding: 2.5rem 1rem 4rem;
   }
+
+  .page { max-width: 860px; margin: 0 auto; }
+
+  /* ── Brand ── */
   .brand {
-    color: var(--green);
+    font-family: var(--font-mono);
+    color: var(--brand);
+    font-size: 1rem;
     font-weight: 700;
-    font-size: 1.1rem;
-    letter-spacing: 0.15em;
-    margin-bottom: 0.25rem;
+    letter-spacing: 0.12em;
     text-align: center;
+    margin-bottom: 0.25rem;
   }
-  .tagline { color: var(--muted); font-size: 0.8rem; margin-bottom: 2rem; text-align: center; }
-  .card {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    padding: 1.5rem 2rem;
-    width: 100%;
-    max-width: 780px;
-    margin-bottom: 1.5rem;
-  }
-  .title { color: var(--magenta); font-size: 1.4rem; font-weight: 700; margin-bottom: 1rem; }
-  .meta-row { display: flex; gap: 1rem; flex-wrap: wrap; margin-bottom: 1.5rem; }
-  .chip {
-    border: 1px solid var(--border);
-    border-radius: 6px;
-    padding: 0.4rem 0.8rem;
-    font-size: 0.8rem;
-  }
-  .chip-label { color: var(--muted); font-size: 0.7rem; display: block; }
-  .chip-value { color: var(--yellow); font-weight: 600; }
-  .section-rule {
-    border: none;
-    border-top: 1px solid var(--cyan);
-    margin: 1rem 0;
-    opacity: 0.4;
-  }
-  .section-title { color: var(--cyan); font-weight: 700; font-size: 0.9rem; margin-bottom: 0.8rem; }
-  .ingredient-list { list-style: none; }
-  .ingredient-list li {
-    color: var(--green);
-    padding: 0.2rem 0;
-    display: flex;
-    align-items: baseline;
-    gap: 0.5rem;
-  }
-  .ingredient-list li::before {
-    content: "[ ]";
+  .tagline {
+    font-family: var(--font-mono);
     color: var(--muted);
     font-size: 0.75rem;
+    letter-spacing: 0.04em;
+    text-align: center;
+    margin-bottom: 2rem;
+  }
+
+  /* ── Search card ── */
+  .search-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 1.25rem 1.5rem;
+    margin-bottom: 1.5rem;
+  }
+  .search-row { display: flex; gap: 0.5rem; }
+
+  .url-input {
+    flex: 1;
+    min-width: 0;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    color: var(--text);
+    font-family: var(--font);
+    font-size: 0.95rem;
+    padding: 0.6rem 0.9rem;
+    outline: none;
+    transition: border-color 0.15s;
+  }
+  .url-input:focus { border-color: var(--brand); }
+  .url-input::placeholder { color: var(--muted); }
+
+  .btn-primary {
+    background: var(--brand);
+    border: none;
+    border-radius: var(--radius-sm);
+    color: #141210;
+    cursor: pointer;
+    font-family: var(--font);
+    font-size: 0.9rem;
+    font-weight: 700;
+    padding: 0.6rem 1.25rem;
+    white-space: nowrap;
+    transition: opacity 0.15s;
+    position: relative;
+  }
+  .btn-primary:hover { opacity: 0.88; }
+  .btn-primary:disabled { opacity: 0.55; cursor: wait; }
+  .btn-primary.loading { color: transparent; }
+  .btn-primary.loading::after {
+    content: '';
+    position: absolute;
+    width: 14px; height: 14px;
+    top: 50%; left: 50%;
+    margin: -7px 0 0 -7px;
+    border: 2px solid #141210;
+    border-top-color: transparent;
+    border-radius: 50%;
+    animation: spin 0.6s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .example-hint { margin-top: 0.65rem; font-size: 0.8rem; color: var(--muted); }
+  .example-hint a { color: var(--link); text-decoration: none; }
+  .example-hint a:hover { text-decoration: underline; }
+
+  .error-msg {
+    margin-top: 0.75rem;
+    color: var(--error);
+    font-size: 0.875rem;
+  }
+
+  /* ── Recipe card ── */
+  .recipe-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 2rem;
+    margin-bottom: 1.5rem;
+  }
+
+  /* ── Recipe header ── */
+  .recipe-header { margin-bottom: 1.25rem; }
+
+  .recipe-title {
+    font-size: 2rem;
+    font-weight: 700;
+    color: var(--text);
+    line-height: 1.2;
+    letter-spacing: -0.02em;
+    margin-bottom: 0.5rem;
+  }
+
+  .source-badge {
+    font-family: var(--font-mono);
+    font-size: 0.65rem;
+    color: var(--muted);
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    padding: 0.1rem 0.45rem;
+    vertical-align: middle;
+    letter-spacing: 0.03em;
+  }
+  .scale-badge {
+    display: none;
+    font-family: var(--font-mono);
+    font-size: 0.65rem;
+    color: var(--brand);
+    border: 1px solid var(--brand);
+    border-radius: 3px;
+    padding: 0.1rem 0.45rem;
+    vertical-align: middle;
+    margin-left: 0.35rem;
+    letter-spacing: 0.03em;
+  }
+
+  /* ── Metadata chips ── */
+  .meta-row {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+    margin-bottom: 1.5rem;
+  }
+  .chip {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 0.35rem 0.75rem;
+  }
+  .chip-label {
+    display: block;
+    font-size: 0.6rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--muted);
+  }
+  .chip-value { font-size: 0.85rem; font-weight: 600; color: var(--text); }
+
+  /* ── Action bar ── */
+  .action-bar {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 0.75rem 0;
+    border-top: 1px solid var(--border);
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 1.75rem;
+    flex-wrap: wrap;
+  }
+  .scale-group { display: flex; align-items: center; gap: 0.6rem; flex-wrap: wrap; }
+  .scale-label { font-size: 0.78rem; color: var(--muted); white-space: nowrap; }
+  .scale-pills { display: flex; gap: 0.3rem; flex-wrap: wrap; }
+
+  .pill {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    color: var(--text-dim);
+    cursor: pointer;
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    font-weight: 500;
+    padding: 0.22rem 0.6rem;
+    transition: all 0.12s;
+    white-space: nowrap;
+  }
+  .pill:hover { border-color: var(--brand); color: var(--brand); }
+  .pill.active { background: var(--brand); border-color: var(--brand); color: #141210; font-weight: 700; }
+
+  .btn-ghost {
+    background: transparent;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    color: var(--muted);
+    cursor: pointer;
+    font-family: var(--font);
+    font-size: 0.78rem;
+    padding: 0.28rem 0.8rem;
+    margin-left: auto;
+    transition: all 0.12s;
+    white-space: nowrap;
+  }
+  .btn-ghost:hover { border-color: var(--text-dim); color: var(--text); }
+
+  /* ── Recipe body (two-column on desktop) ── */
+  .recipe-body {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 2rem;
+  }
+  @media (min-width: 680px) {
+    .recipe-body { grid-template-columns: 5fr 8fr; gap: 2.5rem; }
+  }
+
+  .section-title {
+    font-size: 0.65rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.14em;
+    color: var(--muted);
+    margin-bottom: 0.9rem;
+  }
+
+  /* ── Ingredients ── */
+  .ingredient-list { list-style: none; }
+  .ingredient-list li { padding: 0.05rem 0; }
+
+  .ingredient-list label {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.55rem;
+    cursor: pointer;
+    font-size: 0.875rem;
+    line-height: 1.55;
+    color: var(--text);
+    transition: opacity 0.15s;
+    padding: 0.18rem 0;
+    user-select: none;
+  }
+  .ingredient-list label:hover { opacity: 0.75; }
+
+  .ingredient-list input[type=checkbox] {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 14px;
+    height: 14px;
+    min-width: 14px;
+    border: 1px solid var(--border);
+    border-radius: 2px;
+    background: var(--bg);
+    cursor: pointer;
+    margin-top: 3px;
+    position: relative;
+    transition: all 0.12s;
     flex-shrink: 0;
   }
+  .ingredient-list input[type=checkbox]:checked {
+    background: var(--brand);
+    border-color: var(--brand);
+  }
+  .ingredient-list input[type=checkbox]:checked::after {
+    content: '';
+    position: absolute;
+    left: 3px; top: 1px;
+    width: 5px; height: 8px;
+    border: 2px solid #141210;
+    border-top: none;
+    border-left: none;
+    transform: rotate(40deg);
+  }
+  .ingredient-list label.done {
+    opacity: 0.38;
+    text-decoration: line-through;
+    text-decoration-color: var(--muted);
+  }
+
+  /* ── Instructions ── */
   .steps-list { list-style: none; counter-reset: steps; }
   .steps-list li {
     counter-increment: steps;
     display: flex;
     gap: 0.75rem;
-    margin-bottom: 0.8rem;
     align-items: flex-start;
+    margin-bottom: 1rem;
   }
   .steps-list li::before {
-    content: counter(steps, decimal-leading-zero) ".";
-    color: #58a6ff;
+    content: counter(steps);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 1.6rem;
+    height: 1.6rem;
+    border-radius: 50%;
+    background: var(--surface2);
+    color: var(--brand);
+    font-family: var(--font-mono);
+    font-size: 0.68rem;
     font-weight: 700;
     flex-shrink: 0;
-    min-width: 2.2rem;
+    margin-top: 0.25rem;
   }
-  .form-row { display: flex; gap: 0.75rem; flex-wrap: wrap; }
-  input[type=url], input[type=number], input[type=text] {
-    background: var(--bg);
-    border: 1px solid var(--border);
-    border-radius: 6px;
+  .steps-list li span {
+    font-size: 0.875rem;
+    line-height: 1.75;
     color: var(--text);
-    font-family: var(--font);
-    font-size: 0.9rem;
-    padding: 0.55rem 0.9rem;
-    outline: none;
-    flex: 1;
-    min-width: 200px;
   }
-  input:focus { border-color: var(--cyan); }
-  button {
-    background: var(--green);
-    border: none;
-    border-radius: 6px;
-    color: #0d1117;
-    cursor: pointer;
-    font-family: var(--font);
-    font-size: 0.9rem;
-    font-weight: 700;
-    padding: 0.55rem 1.4rem;
-    white-space: nowrap;
-  }
-  button:hover { opacity: 0.85; }
-  button.secondary {
-    background: transparent;
-    border: 1px solid var(--cyan);
-    color: var(--cyan);
-  }
-  .error { color: var(--red); margin-top: 0.75rem; }
-  .source-badge {
-    font-size: 0.7rem;
+
+  /* ── Footer ── */
+  .footer {
+    text-align: center;
     color: var(--muted);
-    border: 1px solid var(--border);
-    border-radius: 4px;
-    padding: 0.1rem 0.5rem;
-    margin-left: 0.5rem;
+    font-size: 0.7rem;
+    font-family: var(--font-mono);
+    letter-spacing: 0.04em;
+    margin-top: 1.5rem;
   }
-  .footer { color: var(--muted); font-size: 0.75rem; margin-top: 1rem; text-align: center; }
-  @media (max-width: 500px) { .card { padding: 1rem; } }
+
+  /* ── Mobile ── */
+  @media (max-width: 500px) {
+    .recipe-card { padding: 1.25rem; }
+    .recipe-title { font-size: 1.5rem; }
+    .search-row { flex-direction: column; }
+    .btn-primary { width: 100%; text-align: center; }
+    .url-input { font-size: 16px; }
+  }
+
+  /* ── Print ── */
   @media print {
-    .brand, .tagline, form, .footer, .source-badge, #scale-badge { display: none !important; }
-    body { background: white; color: black; }
-    .card { border: none; }
-    .ingredient-list li { color: black; }
-    .ingredient-list li::before { color: #666; }
+    .search-card, .action-bar, .footer,
+    .source-badge, .scale-badge { display: none !important; }
+    body { background: white; color: black; padding: 0; font-family: Georgia, serif; }
+    .recipe-card { border: none; padding: 0; background: white; }
+    .recipe-title { color: black; font-size: 1.6rem; }
+    .chip { border-color: #ccc; background: #f5f5f5; }
+    .chip-label, .chip-value { color: #333; }
+    .section-title { color: #555; }
+    .ingredient-list label { color: black; }
+    .ingredient-list input[type=checkbox] { border-color: #999; background: white; }
+    .steps-list li::before { background: #eee; color: #333; }
+    .steps-list li span { color: black; }
+    .recipe-body { grid-template-columns: 5fr 8fr; gap: 2rem; }
+    @page { margin: 1.5cm; }
   }
 """
 
@@ -182,17 +399,24 @@ _HOME_TEMPLATE = """
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Recipe Cleanser</title>
+  <title>Recipe Cleanse{% if recipe %} — {{ recipe.title }}{% endif %}</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>✿</text></svg>">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <style>{{ css }}</style>
 </head>
 <body>
-  <div class="brand">✿  Recipe Cleanser  ✿</div>
-  <div class="tagline">Cuts the clutter — keeps the cooking.</div>
+<div class="page">
 
-  <div class="card">
-    <form action="/parse" method="post" onsubmit="handleSubmit(this)">
-      <div class="form-row">
+  <div class="brand">✿  Recipe Cleanse  ✿</div>
+  <div class="tagline">Strip the blog. Keep the recipe.</div>
+
+  <div class="search-card">
+    <form action="/parse#recipe" method="post" onsubmit="handleSubmit(this)">
+      <div class="search-row">
         <input
+          class="url-input"
           type="url"
           name="url"
           placeholder="Paste a recipe blog URL…"
@@ -200,27 +424,24 @@ _HOME_TEMPLATE = """
           autofocus
           value="{{ url or '' }}"
         />
-        <button type="submit">Clean Recipe →</button>
+        <button class="btn-primary" type="submit">Clean →</button>
       </div>
       {% if error %}
-        <p class="error">✖  {{ error }}</p>
+        <p class="error-msg">✖  {{ error }}</p>
       {% endif %}
     </form>
-    <p style="margin-top:0.6rem;font-size:0.8rem;">
-      <span style="color:var(--muted);">Try an example: </span>
-      <a href="#" style="color:var(--cyan);text-decoration:none;"
-         onclick="document.querySelector('input[name=url]').value='https://www.allrecipes.com/recipe/10813/best-chocolate-chip-cookies/';return false;">
-        Chocolate Chip Cookies
-      </a>
+    <p class="example-hint">
+      Try: <a href="#" onclick="document.querySelector('.url-input').value='https://www.allrecipes.com/recipe/10813/best-chocolate-chip-cookies/';return false;">Chocolate Chip Cookies</a>
     </p>
   </div>
 
   {% if recipe %}
-  <div class="card">
-    <div class="title">
-      {{ recipe.title }}
-      <span class="source-badge">{{ parse_source }}</span>
-      <span class="source-badge" id="scale-badge" style="display:none;color:var(--yellow);border-color:var(--yellow);">1×</span>
+  <main id="recipe" class="recipe-card">
+
+    <div class="recipe-header">
+      <h1 class="recipe-title">{{ recipe.title }}</h1>
+      <span class="source-badge">{{ source_label }}</span>
+      <span class="scale-badge" id="scale-badge"></span>
     </div>
 
     {% if recipe.prep_time or recipe.cook_time or recipe.total_time or recipe.servings %}
@@ -252,88 +473,96 @@ _HOME_TEMPLATE = """
     </div>
     {% endif %}
 
-    <!-- Scale control -->
-    <form style="margin-bottom:0.5rem;" onsubmit="applyScale(event)">
-      <div class="form-row" style="align-items:center;">
-        <label style="color:var(--muted);font-size:0.85rem;white-space:nowrap;">
-          Serving scale:
-        </label>
-        <input
-          type="number"
-          id="scale-input"
-          value="{{ multiplier }}"
-          min="0.1"
-          step="0.5"
-          style="max-width:100px;"
-        />
-        <button type="submit" class="secondary">Apply ×</button>
+    <div class="action-bar">
+      <div class="scale-group">
+        <span class="scale-label">Scale:</span>
+        <div class="scale-pills">
+          <button type="button" class="pill" onclick="applyPreset(0.5, this)">½×</button>
+          <button type="button" class="pill active" onclick="applyPreset(1, this)">1×</button>
+          <button type="button" class="pill" onclick="applyPreset(1.5, this)">1.5×</button>
+          <button type="button" class="pill" onclick="applyPreset(2, this)">2×</button>
+          <button type="button" class="pill" onclick="applyPreset(3, this)">3×</button>
+        </div>
       </div>
-    </form>
-    <div style="margin-bottom:1rem;">
-      <button type="button" class="secondary" onclick="window.print()" style="font-size:0.8rem;padding:0.4rem 1rem;">
-        Print Recipe
-      </button>
+      <button type="button" class="btn-ghost" onclick="window.print()">Print</button>
     </div>
 
-    <!-- Ingredients -->
-    <hr class="section-rule">
-    <div class="section-title">Ingredients</div>
-    <ul class="ingredient-list" id="ingredients-list">
-      {% for item in ingredients %}
-      <li>{{ item }}</li>
-      {% endfor %}
-    </ul>
+    <div class="recipe-body">
+      <section>
+        <h2 class="section-title">Ingredients</h2>
+        <ul class="ingredient-list" id="ingredients-list">
+          {% for item in ingredients %}
+          <li>
+            <label>
+              <input type="checkbox" onchange="this.parentElement.classList.toggle('done', this.checked)">
+              {{ item }}
+            </label>
+          </li>
+          {% endfor %}
+        </ul>
+      </section>
 
-    <!-- Instructions -->
-    <hr class="section-rule">
-    <div class="section-title">Instructions</div>
-    <ol class="steps-list">
-      {% for step in recipe.instructions %}
-      <li>{{ step }}</li>
-      {% endfor %}
-    </ol>
-  </div>
+      <section>
+        <h2 class="section-title">Instructions</h2>
+        <ol class="steps-list">
+          {% for step in recipe.instructions %}
+          <li><span>{{ step }}</span></li>
+          {% endfor %}
+        </ol>
+      </section>
+    </div>
 
-  <!-- Hidden data for client-side scaling -->
+  </main>
+
   <script>
     const BASE_INGREDIENTS = {{ base_ingredients_json }};
-    const BASE_MULTIPLIER  = {{ multiplier }};
+    let currentMult = 1;
 
-    async function applyScale(evt) {
-      evt.preventDefault();
-      const mult = parseFloat(document.getElementById('scale-input').value);
-      if (isNaN(mult) || mult <= 0) { alert('Enter a positive number.'); return; }
+    async function applyPreset(mult, btn) {
+      if (mult === currentMult) return;
+      currentMult = mult;
+
+      document.querySelectorAll('.pill').forEach(p => p.classList.remove('active'));
+      btn.classList.add('active');
+
+      const badge = document.getElementById('scale-badge');
+      badge.textContent = mult + '×';
+      badge.style.display = mult === 1 ? 'none' : 'inline';
 
       const resp = await fetch('/scale', {
-        method:  'POST',
+        method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body:    JSON.stringify({ ingredients: BASE_INGREDIENTS, multiplier: mult }),
+        body: JSON.stringify({ ingredients: BASE_INGREDIENTS, multiplier: mult }),
       });
       const data = await resp.json();
       const list = document.getElementById('ingredients-list');
       list.innerHTML = '';
-      data.ingredients.forEach(i => {
-        const li = document.createElement('li');
-        li.textContent = i;
+      data.ingredients.forEach(text => {
+        const li  = document.createElement('li');
+        const lbl = document.createElement('label');
+        const chk = document.createElement('input');
+        chk.type = 'checkbox';
+        chk.onchange = function() { this.parentElement.classList.toggle('done', this.checked); };
+        lbl.appendChild(chk);
+        lbl.appendChild(document.createTextNode(' ' + text));
+        li.appendChild(lbl);
         list.appendChild(li);
       });
-      const badge = document.getElementById('scale-badge');
-      if (badge) {
-        badge.textContent = mult + '×';
-        badge.style.display = '';
-      }
     }
   </script>
   {% endif %}
 
-  <div class="footer">Recipe Cleanser — open source, no trackers, no stories.</div>
-  <script>
-  function handleSubmit(form) {
-    const btn = form.querySelector('button[type=submit]');
-    btn.disabled = true;
-    btn.textContent = 'Fetching…';
-  }
-  </script>
+  <footer class="footer">Recipe Cleanse — open source · no trackers · no stories</footer>
+
+</div>
+
+<script>
+function handleSubmit(form) {
+  const btn = form.querySelector('.btn-primary');
+  btn.disabled = true;
+  btn.classList.add('loading');
+}
+</script>
 </body>
 </html>
 """
@@ -343,31 +572,24 @@ _HOME_TEMPLATE = """
 
 @app.get("/")
 def home():
-    """Render the landing page with the URL input form."""
     return render_template_string(
         _HOME_TEMPLATE,
         css=_BASE_CSS,
         recipe=None,
         error=None,
         url=None,
-        parse_source=None,
+        source_label=None,
         ingredients=[],
         base_ingredients_json="[]",
-        multiplier=1,
     )
 
 
 @app.post("/parse")
 def parse():
-    """
-    Accept a recipe URL via HTML form POST, run the pipeline, and render
-    the recipe card inline on the same page.
-    """
-    url        = request.form.get("url", "").strip()
-    error      = None
-    recipe     = None
-    parse_source = None
-    multiplier   = 1.0
+    url          = request.form.get("url", "").strip()
+    error        = None
+    recipe       = None
+    source_label = None
 
     if not url:
         error = "Please enter a URL."
@@ -376,26 +598,23 @@ def parse():
             url = "https://" + url
         try:
             result = fetch_recipe(url)
-
             if not result.needs_ai:
                 recipe       = result.data
-                parse_source = "schema"
+                source_label = "✓ instant"
+            elif result.raw_text:
+                recipe       = parse_with_ai(result.raw_text)
+                source_label = "✦ AI parsed"
             else:
-                if result.raw_text:
-                    recipe       = parse_with_ai(result.raw_text)
-                    parse_source = "ai"
-                else:
-                    error = (
-                        "Couldn't extract text from that page. "
-                        "Some sites require JavaScript — try another URL."
-                    )
-
+                error = (
+                    "Couldn't extract text from that page. "
+                    "Some sites require JavaScript — try another URL."
+                )
         except ConnectionError as exc:
             error = str(exc)
         except (RuntimeError, ValueError) as exc:
             error = f"AI parsing failed: {exc}"
         except Exception as exc:
-            error = f"Unexpected error ({type(exc).__name__}): {exc}"
+            error = f"Unexpected error: {exc}"
 
     ingredients = recipe.get("ingredients", []) if recipe else []
 
@@ -405,35 +624,21 @@ def parse():
         recipe=recipe,
         error=error,
         url=url,
-        parse_source=parse_source,
+        source_label=source_label,
         ingredients=ingredients,
         base_ingredients_json=json.dumps(ingredients),
-        multiplier=multiplier,
     )
 
 
 @app.post("/scale")
 def scale():
-    """
-    JSON API endpoint for client-side scaling.
-
-    Request body:  { "ingredients": [...], "multiplier": 1.5 }
-    Response body: { "ingredients": [...] }   (scaled list)
-    """
     body        = request.get_json(silent=True) or {}
     ingredients = body.get("ingredients", [])
     multiplier  = float(body.get("multiplier", 1.0))
-
     if multiplier <= 0:
         return jsonify({"error": "multiplier must be positive"}), 400
+    return jsonify({"ingredients": scale_ingredients(ingredients, multiplier)})
 
-    scaled = scale_ingredients(ingredients, multiplier)
-    return jsonify({"ingredients": scaled})
-
-
-# ── Vercel / Local dev entry point ────────────────────────────────────────────
-# Vercel looks for an `app` (WSGI) object in this file.
-# For local testing: `python api/index.py`
 
 if __name__ == "__main__":
     app.run(debug=True, port=5000)
