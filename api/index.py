@@ -431,9 +431,9 @@ _HOME_TEMPLATE = """
       {% endif %}
     </form>
     <p class="example-hint">
-      Try: <a href="#" onclick="document.querySelector('.url-input').value='https://www.simplyrecipes.com/recipes/homemade_pizza/';return false;">Homemade Pizza</a>
+      Try: <a href="#" onclick="document.querySelector('.url-input').value='https://www.bbcgoodfood.com/recipes/banana-bread';return false;">Banana Bread</a>
       &nbsp;·&nbsp;
-      <a href="#" onclick="document.querySelector('.url-input').value='https://cookieandkate.com/perfect-banana-bread-recipe/';return false;">Banana Bread</a>
+      <a href="#" onclick="document.querySelector('.url-input').value='https://www.bbcgoodfood.com/recipes/best-ever-chocolate-brownies-recipe';return false;">Chocolate Brownies</a>
     </p>
   </div>
 
