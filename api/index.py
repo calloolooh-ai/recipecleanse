@@ -9,7 +9,6 @@ Routes:
 
 import sys
 import os
-import json
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
@@ -517,7 +516,7 @@ _HOME_TEMPLATE = """
   </main>
 
   <script>
-    const BASE_INGREDIENTS = {{ base_ingredients_json }};
+    const BASE_INGREDIENTS = {{ ingredients | tojson }};
     let currentMult = 1;
 
     async function applyPreset(mult, btn) {
@@ -600,7 +599,7 @@ def home():
         url=None,
         source_label=None,
         ingredients=[],
-        base_ingredients_json="[]",
+
     )
 
 
@@ -646,7 +645,7 @@ def parse():
         url=url,
         source_label=source_label,
         ingredients=ingredients,
-        base_ingredients_json=json.dumps(ingredients),
+
     )
 
 
