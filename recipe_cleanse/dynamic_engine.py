@@ -2,7 +2,7 @@
 dynamic_engine.py — AI semantic parsing layer.
 
 Accepts raw, unstructured webpage text and returns a clean, validated
-recipe dict by calling either the Google Gemini API or a local Ollama server.
+recipe dict by calling the configured AI backend (Groq, OpenAI, or Google Gemini).
 
 The strict system prompt in config.py locks the model to return only
 machine-parseable JSON — no prose, no fences, no apologies.
@@ -20,8 +20,6 @@ from recipe_cleanse.config import (
     OPENAI_MODEL,
     GOOGLE_API_KEY,
     GOOGLE_MODEL,
-    OLLAMA_BASE_URL,
-    OLLAMA_MODEL,
 )
 
 
@@ -52,12 +50,9 @@ def parse_with_ai(raw_text: str) -> dict:
     if AI_BACKEND == "google":
         return _parse_google(raw_text)
 
-    if AI_BACKEND == "ollama":
-        return _parse_ollama(raw_text)
-
     raise ValueError(
         f"Unknown AI_BACKEND='{AI_BACKEND}'. "
-        "Valid options: 'openai' (default), 'google', or 'ollama' (local dev)."
+        "Valid options: 'groq' (default), 'openai', or 'google'."
     )
 
 
@@ -194,51 +189,6 @@ def _parse_google(raw_text: str) -> dict:
         raise RuntimeError(f"Gemini API error: {type(exc).__name__}: {exc}") from exc
 
     return _parse_and_validate_json(response.text)
-
-
-# ── Ollama (Local) Backend ────────────────────────────────────────────────────
-
-def _parse_ollama(raw_text: str) -> dict:
-    """
-    Call a locally running Ollama server.
-    Install Ollama: https://ollama.ai
-    Pull model:     ollama pull llama3.2
-    """
-    try:
-        import ollama
-    except ImportError:
-        raise RuntimeError(
-            "Package 'ollama' is not installed.\n"
-            "Fix: pip install ollama\n"
-            "Then install Ollama server: https://ollama.ai"
-        )
-
-    client = ollama.Client(host=OLLAMA_BASE_URL)
-
-    try:
-        response = client.chat(
-            model=OLLAMA_MODEL,
-            messages=[
-                {"role": "system", "content": AI_SYSTEM_PROMPT},
-                {
-                    "role": "user",
-                    "content": f"Extract the complete recipe from this webpage text:\n\n{raw_text}",
-                },
-            ],
-            options={
-                "temperature": 0,       # Deterministic structured output
-                "num_predict": 2048,    # Enough tokens for a full recipe
-            },
-            format="json",              # Ollama JSON mode
-        )
-    except Exception as exc:
-        raise RuntimeError(
-            f"Ollama request failed: {exc}\n"
-            f"Is Ollama running at {OLLAMA_BASE_URL}? "
-            f"Is model '{OLLAMA_MODEL}' pulled? (ollama pull {OLLAMA_MODEL})"
-        )
-
-    return _parse_and_validate_json(response["message"]["content"])
 
 
 # ── JSON Parsing & Validation ─────────────────────────────────────────────────
