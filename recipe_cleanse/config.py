@@ -2,8 +2,8 @@
 config.py — Application-wide configuration and constants.
 
 All runtime settings are loaded from environment variables so the app
-can be deployed to Vercel (production) or run locally with Ollama (dev)
-without changing a single line of source code.
+can be deployed to Vercel (production) or run locally without changing
+a single line of source code.
 """
 
 import os
@@ -16,7 +16,6 @@ load_dotenv()
 # Set AI_BACKEND=groq    (default — generous free tier, very fast)
 # Set AI_BACKEND=openai  (OpenAI GPT models)
 # Set AI_BACKEND=google  (Gemini)
-# Set AI_BACKEND=ollama  (local dev, requires Ollama server)
 AI_BACKEND = os.getenv("AI_BACKEND", "groq")
 
 # Groq — free tier at console.groq.com  (~14,400 req/day free)
@@ -30,10 +29,6 @@ OPENAI_MODEL   = os.getenv("OPENAI_MODEL", "gpt-4o-mini")
 # Google Gemini — aistudio.google.com/app/apikey
 GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY", "")
 GOOGLE_MODEL   = os.getenv("GOOGLE_MODEL", "gemini-2.0-flash-lite")  # lite = higher free quota
-
-# Ollama — local inference server (https://ollama.ai)
-OLLAMA_BASE_URL = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
-OLLAMA_MODEL    = os.getenv("OLLAMA_MODEL", "llama3.2")
 
 # ── HTTP Fetching ─────────────────────────────────────────────────────────────
 REQUEST_TIMEOUT = 20  # seconds before giving up on a slow blog
