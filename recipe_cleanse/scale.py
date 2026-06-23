@@ -83,12 +83,39 @@ _UNIT_QUANTITY_RE = re.compile(
 # ── Public API ────────────────────────────────────────────────────────────────
 
 def scale_ingredients(ingredients: list[str], multiplier: float) -> list[str]:
-    """
-    Return a new list with every ingredient quantity scaled by `multiplier`.
-    """
+    """Return a new list with every ingredient quantity scaled by `multiplier`."""
     if multiplier == 1.0:
         return list(ingredients)
     return [_scale_line(line, multiplier) for line in ingredients]
+
+
+def scale_instructions(instructions: list[str], multiplier: float) -> list[str]:
+    """
+    Return instruction steps with every measurement quantity scaled.
+
+    Unlike scale_ingredients (which scales the leading quantity), this scales
+    ALL quantity+unit pairs found anywhere in each step — e.g. both
+    "2 cups flour" and "1/2 tsp salt" in one sentence are both scaled.
+    Time values (minutes, hours) and temperatures (°F, °C) are never touched
+    because they are not in the _UNITS list.
+    """
+    if multiplier == 1.0:
+        return list(instructions)
+    return [_scale_instruction_step(step, multiplier) for step in instructions]
+
+
+def _scale_instruction_step(step: str, multiplier: float) -> str:
+    """Scale all unit-qualified quantities throughout a single instruction step."""
+    normalised = _replace_unicode_fractions(step)
+
+    def _replace(m: re.Match) -> str:
+        token = m.group(1)
+        value = _to_float(token)
+        if value is None:
+            return m.group(0)
+        return m.group(0).replace(token, _to_string(value * multiplier), 1)
+
+    return _UNIT_QUANTITY_RE.sub(_replace, normalised)
 
 
 # ── Internal Helpers ──────────────────────────────────────────────────────────

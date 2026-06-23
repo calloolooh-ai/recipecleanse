@@ -16,7 +16,7 @@ from flask import Flask, request, jsonify, render_template_string
 
 from recipe_cleanse.scraper        import fetch_recipe
 from recipe_cleanse.dynamic_engine import parse_with_ai
-from recipe_cleanse.scale          import scale_ingredients
+from recipe_cleanse.scale          import scale_ingredients, scale_instructions
 
 app = Flask(__name__)
 
@@ -505,7 +505,7 @@ _HOME_TEMPLATE = """
 
       <section>
         <h2 class="section-title">Instructions</h2>
-        <ol class="steps-list">
+        <ol class="steps-list" id="steps-list">
           {% for step in recipe.instructions %}
           <li><span>{{ step }}</span></li>
           {% endfor %}
@@ -516,12 +516,12 @@ _HOME_TEMPLATE = """
   </main>
 
   <script>
-    const BASE_INGREDIENTS = {{ ingredients | tojson }};
+    const BASE_INGREDIENTS  = {{ ingredients | tojson }};
+    const BASE_INSTRUCTIONS = {{ recipe.instructions | tojson }};
     let currentMult = 1;
 
     async function applyPreset(mult, btn) {
       if (mult === currentMult) return;
-      const prevMult = currentMult;
       const prevActive = document.querySelector('.pill.active');
 
       document.querySelectorAll('.pill').forEach(p => p.classList.remove('active'));
@@ -532,7 +532,11 @@ _HOME_TEMPLATE = """
         resp = await fetch('/scale', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ ingredients: BASE_INGREDIENTS, multiplier: mult }),
+          body: JSON.stringify({
+            ingredients:  BASE_INGREDIENTS,
+            instructions: BASE_INSTRUCTIONS,
+            multiplier:   mult,
+          }),
         });
       } catch (err) {
         document.querySelectorAll('.pill').forEach(p => p.classList.remove('active'));
@@ -559,9 +563,19 @@ _HOME_TEMPLATE = """
         chk.type = 'checkbox';
         chk.onchange = function() { this.parentElement.classList.toggle('done', this.checked); };
         lbl.appendChild(chk);
-        lbl.appendChild(document.createTextNode(' ' + text));
+        lbl.appendChild(document.createTextNode(' ' + text));
         li.appendChild(lbl);
         list.appendChild(li);
+      });
+
+      const steps = document.getElementById('steps-list');
+      steps.innerHTML = '';
+      data.instructions.forEach(text => {
+        const li   = document.createElement('li');
+        const span = document.createElement('span');
+        span.textContent = text;
+        li.appendChild(span);
+        steps.appendChild(li);
       });
     }
 
@@ -651,15 +665,19 @@ def parse():
 
 @app.post("/scale")
 def scale():
-    body        = request.get_json(silent=True) or {}
-    ingredients = body.get("ingredients", [])
+    body         = request.get_json(silent=True) or {}
+    ingredients  = body.get("ingredients", [])
+    instructions = body.get("instructions", [])
     try:
         multiplier = float(body.get("multiplier", 1.0))
     except (TypeError, ValueError):
         return jsonify({"error": "multiplier must be a number"}), 400
     if multiplier <= 0:
         return jsonify({"error": "multiplier must be positive"}), 400
-    return jsonify({"ingredients": scale_ingredients(ingredients, multiplier)})
+    return jsonify({
+        "ingredients":  scale_ingredients(ingredients, multiplier),
+        "instructions": scale_instructions(instructions, multiplier),
+    })
 
 
 if __name__ == "__main__":
