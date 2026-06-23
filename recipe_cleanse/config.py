@@ -44,7 +44,7 @@ REQUEST_HEADERS = {
 }
 
 # Maximum characters fed into the AI (keeps costs + latency low)
-MAX_RAW_TEXT_CHARS = 8_000
+MAX_RAW_TEXT_CHARS = 20_000
 
 # ── AI System Prompt ──────────────────────────────────────────────────────────
 # This strict prompt is the heart of the AI layer: it locks the model into

@@ -64,9 +64,12 @@ _UNITS = (
     r"large|medium|small|inches?|in\b"
 )
 
-# Matches a quantity at the START of the string
+# Matches a quantity at the START of the string.
+# Negative lookahead (?![-\w]) prevents matching numbers that are part of
+# compound ingredient names like "5-spice" or "No2" — those have a hyphen
+# or word character immediately after the digit with no whitespace.
 _LEADING_RE = re.compile(
-    rf"^\s*{_QUANTITY_PATTERN}\s*",
+    rf"^\s*{_QUANTITY_PATTERN}(?=[\s,]|$)",
     re.VERBOSE | re.UNICODE,
 )
 
