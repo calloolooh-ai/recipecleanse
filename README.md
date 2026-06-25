@@ -10,7 +10,7 @@ RecipeCleanse takes any recipe blog URL and returns just the recipe. No life sto
 
 ## Features
 
-- **Two-layer extraction** — tries schema.org/JSON-LD first (zero AI cost); falls back to Gemini AI only when needed
+- **Two-layer extraction** — tries schema.org/JSON-LD first (zero AI cost); falls back to Groq (Llama 70b) AI only when needed
 - **Ingredient scaling** — type a multiplier (0.5×, 2×, 3×) and quantities update instantly, including fractions like ½ and ⅓
 - **Works almost everywhere** — `recipe-scrapers` covers 500+ sites; AI fallback handles the rest
 - **Two interfaces** — beautiful Rich terminal CLI and a dark-themed web UI
