@@ -4,7 +4,7 @@
 
 RecipeCleanse takes any recipe blog URL and returns just the recipe — no life stories, no ads, no pop-ups. Paste a URL, get clean ingredients and steps with optional serving-size scaling.
 
-**Live demo:** _deploy to Vercel and paste URL here_
+**Live demo:** recipecleanser.vercel.app
 
 ---
 
