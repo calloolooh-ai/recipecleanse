@@ -2,7 +2,7 @@
 
 > Strip the blog noise. Keep the cooking.
 
-RecipeCleanse takes any recipe blog URL and returns just the recipe — no life stories, no ads, no pop-ups. Paste a URL, get clean ingredients and steps with optional serving-size scaling.
+RecipeCleanse takes any recipe blog URL and returns just the recipe. No life stories, no ads, no pop-ups. Paste a URL, get clean ingredients and steps with optional serving-size scaling.
 
 **Live demo:** recipecleanser.vercel.app
 
